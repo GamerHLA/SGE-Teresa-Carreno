@@ -1,0 +1,4 @@
+Array
+(
+    [action] => get_medical_options
+)

@@ -1,0 +1,120 @@
+.notBlock {
+    display: none;
+}
+
+.app-sidebar__user-avatar {
+    width: 48px;
+    padding: 6px;
+    background: #001f3f;
+    /* Azul marino */
+    border: 2px solid #008080;
+    /* Borde verde teal */
+}
+
+.app-sidebar__toggle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 15pt;
+}
+
+.app-sidebar__toggle::before {
+    display: none;
+}
+
+.headerRegister {
+    background: #001f3f;
+    /* Azul marino */
+    color: #ffffff;
+    /* Blanco */
+    border-bottom: 3px solid #008080;
+    /* Línea verde teal en la parte inferior */
+}
+
+.updateRegister {
+    background: #001f3f;
+    /* Azul marino */
+    color: #ffffff;
+    /* Blanco */
+    border: 2px solid #008080;
+    /* Borde verde teal */
+}
+
+.app-nav,
+.app-header,
+.app-sidebar {
+    background: #001f3f !important;
+    /* Azul marino */
+}
+
+/* Estilos adicionales para la nueva paleta de colores */
+.btn-primary {
+    background-color: #001f3f !important;
+    border-color: #001f3f !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover {
+    background-color: #008080 !important;
+    border-color: #008080 !important;
+}
+
+.btn-danger {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+}
+
+.table-primary {
+    background-color: #001f3f !important;
+    color: #ffffff !important;
+}
+
+.badge-primary {
+    background-color: #001f3f !important;
+    color: #ffffff !important;
+}
+
+.badge-danger {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.card-header {
+    background-color: #001f3f !important;
+    color: #ffffff !important;
+    border-bottom: 2px solid #008080 !important;
+}
+
+.nav-link.active {
+    background-color: #008080 !important;
+    color: #ffffff !important;
+}
+
+/* Responsive Sidebar Overrides */
+.app.sidenav-toggled .app-sidebar {
+    left: -230px !important;
+}
+
+.app.sidenav-toggled .app-content {
+    margin-left: 0 !important;
+}
+
+/* Center first column (#) in all DataTables */
+table.dataTable tbody td:first-child,
+table.dataTable thead th:first-child {
+    text-align: center !important;
+}
+
+.text-wrap {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.5 !important;
+    vertical-align: top !important;
+    text-align: left !important;
+}
