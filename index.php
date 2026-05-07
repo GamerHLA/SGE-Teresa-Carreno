@@ -18,14 +18,15 @@ if (!empty($_SESSION['active'])) {
             $usuario = $_POST['usuario'];
             $pass = $_POST['pass'];
 
-            // Consulta SQL para verificar credenciales
-            $sql = "SELECT u.user_id,u.nombre,u.usuario,u.password,u.estatus,r.rol_id,r.nombre_rol 
+            // Consulta SQL para verificar credenciales (Adaptada a PostgreSQL y nueva estructura)
+            $sql = 'SELECT u.id_usuario as user_id, p.nombres as nombre, u.usuario, u."contraseña" as password, u.estatus, r.id as rol_id, r.nombre_rol 
                     FROM usuarios as u 
-                    INNER JOIN rol as r ON u.rol = r.rol_id 
-                    WHERE u.usuario = ?";
+                    INNER JOIN rol as r ON u.id_rol = r.id 
+                    INNER JOIN personas as p ON u.id_persona = p.id_persona
+                    WHERE u.usuario = ?';
             $query = $pdo->prepare($sql);
             $query->execute(array($usuario));
-            $data = $query->fetch();
+            $data = $query->fetch(PDO::FETCH_ASSOC);
 
             // Verifica si el usuario existe y si la contraseña coincide
             if($data && password_verify($pass, $data['password'])) {

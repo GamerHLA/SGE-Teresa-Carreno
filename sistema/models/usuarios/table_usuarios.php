@@ -6,7 +6,11 @@ header('Content-Type: application/json; charset=UTF-8');
 
 // EXTRAER USUARIOS
 try {
-    $sql = "SELECT u.user_id,u.nombre,u.usuario,r.rol_id,r.nombre_rol,u.estatus FROM usuarios as u INNER JOIN rol as r ON u.rol = r.rol_id WHERE u.estatus != 0";
+    $sql = "SELECT u.id_usuario as user_id, p.nombres as nombre, u.usuario, r.id as rol_id, r.nombre_rol, u.estatus 
+            FROM usuarios as u 
+            INNER JOIN rol as r ON u.id_rol = r.id 
+            INNER JOIN personas as p ON u.id_persona = p.id_persona 
+            WHERE u.estatus != 0";
     $query = $pdo->prepare($sql);
     $query->execute();
 
