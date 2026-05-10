@@ -87,84 +87,77 @@ if (!empty($_POST)) {
 
     try {
         // Verificar si la cédula ya existe en la base de datos (excepto para el representante actual)
-        $sql = "SELECT representantes_id FROM representantes WHERE cedula = ? AND representantes_id != ?"; // Consulta para verificar cédula duplicada
-        $query = $pdo->prepare($sql); // Preparar consulta para evitar SQL injection
-        $query->execute([$cedula, $idRepresentantes]); // Ejecutar consulta con parámetros
+        $sql = "SELECT r.id_representates FROM representantes r INNER JOIN personas p ON r.id_representates = p.id_persona WHERE p.cedula = ? AND r.id_representates != ?";
+        $query = $pdo->prepare($sql);
+        $query->execute([$cedula, $idRepresentantes]);
 
-        if ($query->fetch(PDO::FETCH_ASSOC)) { // Si se encuentra un registro con la misma cédula
-            echo json_encode(['status' => false, 'msg' => 'La cédula ya está registrada']); // Enviar error
-            exit; // Terminar ejecución
+        if ($query->fetch(PDO::FETCH_ASSOC)) {
+            echo json_encode(['status' => false, 'msg' => 'La cédula ya está registrada para otro representante']);
+            exit;
         }
 
-        // Determinar si es inserción (nuevo) o actualización (existente)
-        if ($idRepresentantes == 0) { // Si ID es 0, es un nuevo representante
-            $sql = "INSERT INTO representantes (id_nacionalidades, nombre, apellido, sexo, id_estado, id_ciudad, id_municipio, id_parroquia, cedula, telefono, correo, estatus) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"; // Consulta INSERT siempre con estatus = 1 (Activo)
-            $params = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $cedula, $telefono, $email]; // Parámetros para INSERT
-            $msg = 'Representante creado correctamente'; // Mensaje de éxito para nuevo registro
-        } else { // Si ID > 0, es una actualización
-            $sql = "UPDATE representantes SET id_nacionalidades = ?, nombre = ?, apellido = ?, sexo = ?, id_estado = ?, id_ciudad = ?, id_municipio = ?, id_parroquia = ?, cedula = ?, 
-                    telefono = ?, correo = ? WHERE representantes_id = ?"; // Consulta UPDATE - NO modifica estatus
-            $params = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $cedula, $telefono, $email, $idRepresentantes]; // Parámetros para UPDATE
-            $msg = 'Representante actualizado correctamente'; // Mensaje de éxito para actualización
-        }
+        $pdo->beginTransaction();
 
-        // Ejecutar la consulta preparada
-        $query = $pdo->prepare($sql); // Preparar consulta
-        $success = $query->execute($params); // Ejecutar consulta con parámetros
+        try {
+            // 1. Manejar la Persona y Dirección
+            $idPersona = 0;
+            $idDireccion = 0;
 
-        if ($success) { // Si la consulta se ejecutó correctamente
-            
-            // SINCRONIZACIÓN CON PROFESOR: Si es actualización y existe un profesor con la misma cédula, sincronizar datos
-            if ($idRepresentantes > 0) {
-                try {
-                    // Verificar si existe un profesor con la misma cédula
-                    $sqlCheckProf = "SELECT pr.profesor_id, pp.id_persona FROM profesores pr 
-                                     INNER JOIN personas pp ON pp.profesores_id = pr.profesor_id 
-                                     WHERE pp.cedula = ?";
-                    $queryCheckProf = $pdo->prepare($sqlCheckProf);
-                    $queryCheckProf->execute([$cedula]);
-                    $profesorExistente = $queryCheckProf->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($profesorExistente) {
-                        // Sincronizar datos del representante al profesor a través de persona
-                        $sqlSyncProf = "UPDATE personas SET 
-                                        id_nacionalidades = ?, 
-                                        nombres = ?, 
-                                        apellidos = ?, 
-                                        sexo = ?, 
-                                        id_estado = ?, 
-                                        id_ciudad = ?, 
-                                        id_municipio = ?, 
-                                        id_parroquia = ?, 
-                                        telefono = ?, 
-                                        correo_electronico = ?
-                                        WHERE id_persona = ?";
-                        $paramsSyncProf = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $telefono, $email, $profesorExistente['id_persona']];
-                        $querySyncProf = $pdo->prepare($sqlSyncProf);
-                        $querySyncProf->execute($paramsSyncProf);
-                        
-                        error_log("Sincronización representante->profesor exitosa para cédula: " . $cedula);
+            // Buscar si la persona ya existe por cédula
+            $sqlCheck = "SELECT id_persona, id_direccion FROM personas WHERE cedula = ?";
+            $qCheck = $pdo->prepare($sqlCheck);
+            $qCheck->execute([$cedula]);
+            $personaExistente = $qCheck->fetch(PDO::FETCH_ASSOC);
 
-                        // No se actualiza nombre en usuarios porque la tabla actual guarda la relación por id_persona
-                        try {
-                            $sqlUser = "SELECT id_usuario FROM usuarios WHERE id_persona = ?";
-                            $queryUser = $pdo->prepare($sqlUser);
-                            $queryUser->execute([$profesorExistente['id_persona']]);
-                            $usuario = $queryUser->fetch(PDO::FETCH_ASSOC);
-
-                            if ($usuario) {
-                                error_log("Profesor vinculado a usuario id_usuario: " . $usuario['id_usuario']);
-                            }
-                        } catch (Exception $e) {
-                            error_log("Error sincronizando usuario desde representante: " . $e->getMessage());
-                        }
-                    }
-                } catch (PDOException $e) {
-                    // Log del error pero no afecta la operación principal
-                    error_log("Error en sincronización representante->profesor: " . $e->getMessage());
-                }
+            if ($personaExistente) {
+                $idPersona = $personaExistente['id_persona'];
+                $idDireccion = $personaExistente['id_direccion'];
+                
+                // Actualizar Persona
+                $sqlPersUpdate = "UPDATE personas SET id_nacionalidades = ?, nombres = ?, apellidos = ?, sexo = ?, correo_electronico = ?, telefono = ? WHERE id_persona = ?";
+                $pdo->prepare($sqlPersUpdate)->execute([$idNacionalidad, $nombre, $apellido, $sexo, $email, $telefono, $idPersona]);
+                
+                // Actualizar Direccion
+                $sqlDirUpdate = "UPDATE direccion SET id_estados = ?, id_municipios = ?, id_parroquias = ? WHERE id_direccion = ?";
+                $pdo->prepare($sqlDirUpdate)->execute([$idEstado, $idMunicipio, $idParroquia, $idDireccion]);
+            } else {
+                // Generar IDs
+                $idDireccion = $pdo->query("SELECT COALESCE(MAX(id_direccion), 0) + 1 FROM direccion")->fetchColumn();
+                
+                // Insertar Dirección
+                $sqlDir = "INSERT INTO direccion (id_direccion, id_estados, id_municipios, id_parroquias, calle, cog_postal) VALUES (?, ?, ?, ?, '', 0)";
+                $pdo->prepare($sqlDir)->execute([$idDireccion, $idEstado, $idMunicipio, $idParroquia]);
+                
+                $idPersona = $pdo->query("SELECT COALESCE(MAX(id_persona), 0) + 1 FROM personas")->fetchColumn();
+                
+                // Insertar Persona
+                $fechaNac = '1970-01-01'; // Default
+                $sqlPers = "INSERT INTO personas (id_persona, id_nacionalidades, id_direccion, cedula, nombres, apellidos, sexo, fecha_nacimiento, correo_electronico, telefono) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $pdo->prepare($sqlPers)->execute([$idPersona, $idNacionalidad, $idDireccion, $cedula, $nombre, $apellido, $sexo, $fechaNac, $email, $telefono]);
             }
+
+            // 2. Manejar Representante
+            if ($idRepresentantes == 0) {
+                $idRepresentantes = $idPersona;
+                $sql = "INSERT INTO representantes (id_representates, estatus) VALUES (?, 1)";
+                $pdo->prepare($sql)->execute([$idRepresentantes]);
+                
+                $pdo->prepare("UPDATE personas SET representantes_id = ? WHERE id_persona = ?")->execute([$idRepresentantes, $idPersona]);
+                $msg = 'Representante creado correctamente';
+            } else {
+                $msg = 'Representante actualizado correctamente';
+            }
+            
+            $pdo->commit();
+            $success = true;
+        } catch (Exception $ex) {
+            $pdo->rollBack();
+            $success = false;
+            error_log("Error al guardar representante: " . $ex->getMessage());
+        }
+
+        if ($success) {
             
             $response = ['status' => true, 'msg' => $msg];
             if (isset($new_user_name_for_ui)) {

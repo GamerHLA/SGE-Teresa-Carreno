@@ -24,7 +24,6 @@
 
 var tableInscripciones;
 var previousEnrollmentData = null; // Variable para almacenar la inscripción anterior
-var currentEditingCursoId = null; // Variable para el curso actual al editar
 
 window.addEventListener('DOMContentLoaded', function () {
     tableInscripciones = $('#tableInscripciones').DataTable({
@@ -90,11 +89,14 @@ window.addEventListener('DOMContentLoaded', function () {
 
         var idInscripcion = document.querySelector('#idInscripcion').value;
         var alumno = document.querySelector('#listAlumno').value;
-        var curso = document.querySelector('#listCurso').value;
+        var grado = document.querySelector('#listGrado').value;
+        var seccion = document.querySelector('#listSeccion').value;
+        var turno = document.querySelector('#listTurno').value;
+        var profesor = document.querySelector('#listProfesor').value;
         var status = document.querySelector('#listStatus').value;
         var representante = document.querySelector('#txtRepresentante').value;
 
-        if (alumno == '' || curso == '' || status == '') {
+        if (alumno == '' || grado == '' || seccion == '' || turno == '' || profesor == '' || status == '') {
             swal('Atención', 'Todos los campos son necesarios', 'error');
             return false;
         }
@@ -116,7 +118,9 @@ window.addEventListener('DOMContentLoaded', function () {
                     $('#modalFormInscripcion').modal('hide');
                     formInscripcion.reset();
                     swal('¡Crear Inscripción!', objData.msg, 'success');
-                    tableInscripciones.ajax.reload();
+                    if (typeof tableInscripciones !== 'undefined' && tableInscripciones !== null) {
+                        tableInscripciones.ajax.reload();
+                    }
 
                     // Si existe la tabla de alumnos (estamos en lista_alumnos.php), recargarla también
                     if (typeof tableAlumnos !== 'undefined' && tableAlumnos !== null) {
@@ -132,7 +136,10 @@ window.addEventListener('DOMContentLoaded', function () {
 
 window.addEventListener('load', function () {
     getOptionAlumnos();
-    getOptionCursos();
+    getOptionGrados();
+    getOptionSecciones();
+    getOptionTurnos();
+    getOptionProfesores();
 }, false);
 
 function getOptionAlumnos(callback) {
@@ -169,148 +176,76 @@ function getOptionAlumnos(callback) {
     };
 }
 
-// Variable global para almacenar los cursos
-var cursosData = [];
-
-function getOptionCursos() {
+function getOptionGrados(callback) {
     var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
-    var ajaxUrl = './models/options/options-cursos.php';
+    var ajaxUrl = './models/options/options-grados.php';
     request.open('GET', ajaxUrl, true);
     request.send();
     request.onreadystatechange = function () {
         if (request.readyState == 4 && request.status == 200) {
             var data = JSON.parse(request.responseText);
-            cursosData = data; // Guardar datos globalmente
-
-            // Verificar si ya tenemos datos de inscripción anterior para filtrar
-            if (previousEnrollmentData && previousEnrollmentData.grado) {
-                renderCursoOptions(previousEnrollmentData.grado);
-            } else {
-                renderCursoOptions(null);
-            }
-
-            // Agregar evento change al select de curso
-            var selectCurso = document.querySelector('#listCurso');
-            if (selectCurso) {
-                selectCurso.addEventListener('change', function () {
-                    updatePeriodoAndCursoInfo();
-                });
-            }
+            var optionsHtml = '<option value="">Seleccionar Grado</option>';
+            data.forEach(function (valor) {
+                optionsHtml += '<option value="' + valor.id_grado + '">' + valor.grado + '°</option>';
+            });
+            document.querySelector('#listGrado').innerHTML = optionsHtml;
+            if (callback) callback();
         }
     };
 }
 
-function renderCursoOptions(previousGrade, currentCursoId = null) {
-    console.log('Rendering options. Previous Grade:', previousGrade, 'Current Curso:', currentCursoId);
-    var optionsHtml = '<option value="">Seleccionar Grado/Sección</option>';
-
-    var filteredCursos = cursosData;
-
-    // Primer filtro: Grado (si existe inscripción anterior)
-    if (previousGrade !== null) {
-        var prevGradeInt = parseInt(previousGrade);
-        filteredCursos = filteredCursos.filter(function (curso) {
-            var cursoGrade = parseInt(curso.grado);
-            return cursoGrade === prevGradeInt || cursoGrade === (prevGradeInt + 1);
-        });
-    }
-
-    // Segundo filtro: Cupo disponible
-    // Solo mostramos cursos con cupo, EXCEPTO si es el curso actual que se está editando
-    filteredCursos = filteredCursos.filter(function (curso) {
-        var cupoTotal = parseInt(curso.cupo) || 0;
-        var inscritos = parseInt(curso.inscritos) || 0;
-        var tieneCupo = inscritos < cupoTotal;
-        var esCursoActual = currentCursoId != null && curso.curso_id == currentCursoId;
-
-        return tieneCupo || esCursoActual;
-    });
-
-    filteredCursos.forEach(function (valor) {
-        var turnoTexto = valor.tipo_turno || 'Sin turno';
-        var periodoTexto = valor.periodo_completo || 'Sin periodo';
-        optionsHtml += '<option value="' + valor.curso_id + '" data-periodo="' + periodoTexto + '" data-periodo-id="' + valor.periodo_id + '" data-turno="' + valor.tipo_turno + '" data-turno-id="' + valor.turno_id + '" data-grado="' + valor.grado + '" data-seccion="' + valor.seccion + '" data-cupo="' + valor.cupo + '" data-inscritos="' + (valor.inscritos || 0) + '">' + valor.grado + '° - Sección ' + valor.seccion + ' - ' + turnoTexto + ' - ' + periodoTexto + '</option>';
-    });
-
-    document.querySelector('#listCurso').innerHTML = optionsHtml;
-}
-
-
-function updatePeriodoAndCursoInfo(isInitialLoad = false) {
-    var cursoId = document.querySelector('#listCurso').value;
-    var cursoInfoContainer = document.querySelector('#cursoInfoContainer');
-    var cursoInfoContent = document.querySelector('#cursoInfoContent');
-
-    if (cursoId) {
-        var curso = cursosData.find(function (c) { return c.curso_id == cursoId; });
-        if (curso) {
-            // Validación de repitiente
-            if (!isInitialLoad && previousEnrollmentData &&
-                curso.grado == previousEnrollmentData.grado) {
-
-                swal({
-                    title: "Atención",
-                    text: "Alumno ya cursó este Grado. ¿Es repitiente?",
-                    type: "warning",
-                    showCancelButton: true,
-                    confirmButtonText: "Sí",
-                    cancelButtonText: "No",
-                    closeOnConfirm: true,
-                    closeOnCancel: true
-                }, function (isConfirm) {
-                    if (isConfirm) {
-                        // Si es repitiente, mostrar la información del curso
-                        displayCursoInfo(curso);
-                    } else {
-                        // Si no es repitiente (equivocación), limpiar selección
-                        document.querySelector('#listCurso').value = "";
-                        cursoInfoContainer.style.display = 'none';
-                        cursoInfoContent.innerHTML = '';
-                        document.querySelector('#listPeriodoId').value = '';
-                        document.querySelector('#listTurnoId').value = '';
-                    }
-                });
-                return; // Detener ejecución hasta que el usuario responda
-            }
-
-            displayCursoInfo(curso);
+function getOptionSecciones(callback) {
+    var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    var ajaxUrl = './models/options/options-secciones.php';
+    request.open('GET', ajaxUrl, true);
+    request.send();
+    request.onreadystatechange = function () {
+        if (request.readyState == 4 && request.status == 200) {
+            var data = JSON.parse(request.responseText);
+            var optionsHtml = '<option value="">Seleccionar Sección</option>';
+            data.forEach(function (valor) {
+                optionsHtml += '<option value="' + valor.id_seccion + '">' + valor.seccion + '</option>';
+            });
+            document.querySelector('#listSeccion').innerHTML = optionsHtml;
+            if (callback) callback();
         }
-    } else {
-        // Ocultar recuadro si no hay curso seleccionado
-        cursoInfoContainer.style.display = 'none';
-        cursoInfoContent.innerHTML = '';
-        document.querySelector('#listPeriodoId').value = '';
-        document.querySelector('#listTurnoId').value = '';
-    }
+    };
 }
 
-function displayCursoInfo(curso) {
-    var cursoInfoContainer = document.querySelector('#cursoInfoContainer');
-    var cursoInfoContent = document.querySelector('#cursoInfoContent');
+function getOptionTurnos(callback) {
+    var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    var ajaxUrl = './models/options/options-turnos.php';
+    request.open('GET', ajaxUrl, true);
+    request.send();
+    request.onreadystatechange = function () {
+        if (request.readyState == 4 && request.status == 200) {
+            var data = JSON.parse(request.responseText);
+            var optionsHtml = '<option value="">Seleccionar Turno</option>';
+            data.forEach(function (valor) {
+                optionsHtml += '<option value="' + valor.turno_id + '">' + valor.tipo_turno + '</option>';
+            });
+            document.querySelector('#listTurno').innerHTML = optionsHtml;
+            if (callback) callback();
+        }
+    };
+}
 
-    // Guardar periodo_id y turno_id en campos hidden
-    document.querySelector('#listPeriodoId').value = curso.periodo_id;
-    document.querySelector('#listTurnoId').value = curso.turno_id;
-
-    // Calcular cupo disponible
-    var cupoTotal = parseInt(curso.cupo) || 0;
-    var inscritos = parseInt(curso.inscritos) || 0;
-    var disponible = cupoTotal - inscritos;
-    if (disponible < 0) disponible = 0;
-
-    // Mostrar información del curso en el recuadro
-    var profesorNombre = curso.nombre && curso.apellido ? curso.nombre + ' ' + curso.apellido : 'No asignado';
-    var htmlInfo = '<div class="row">' +
-        '<div class="col-md-6"><strong>Grado:</strong> ' + curso.grado + '°</div>' +
-        '<div class="col-md-6"><strong>Sección:</strong> ' + curso.seccion + '</div>' +
-        '<div class="col-md-6"><strong>Periodo:</strong> ' + (curso.periodo_completo || 'No asignado') + '</div>' +
-        '<div class="col-md-6"><strong>Turno:</strong> ' + (curso.tipo_turno || 'No asignado') + '</div>' +
-        '<div class="col-md-6"><strong>Cupo:</strong> ' + disponible + ' / ' + cupoTotal + ' disponibles</div>' +
-        '<div class="col-md-6"><strong>Profesor:</strong> ' + profesorNombre + '</div>' +
-        '</div>';
-
-    cursoInfoContent.innerHTML = htmlInfo;
-    cursoInfoContainer.style.display = 'block';
+function getOptionProfesores(callback) {
+    var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    var ajaxUrl = './models/options/options-profesor.php';
+    request.open('GET', ajaxUrl, true);
+    request.send();
+    request.onreadystatechange = function () {
+        if (request.readyState == 4 && request.status == 200) {
+            var data = JSON.parse(request.responseText);
+            var optionsHtml = '<option value="">Seleccionar Profesor</option>';
+            data.forEach(function (valor) {
+                optionsHtml += '<option value="' + valor.profesor_id + '">' + valor.nombre + ' ' + valor.apellido + '</option>';
+            });
+            document.querySelector('#listProfesor').innerHTML = optionsHtml;
+            if (callback) callback();
+        }
+    };
 }
 
 function getRepresentanteAlumno(alumnoId) {
@@ -367,22 +302,11 @@ function getPreviousEnrollment(alumnoId) {
                     '<strong>Turno:</strong> ' + objData.data.tipo_turno;
                 previousInfo.innerHTML = htmlInfo;
                 previousContainer.style.display = 'block';
-
-                // RE-RENDER OPTIONS
-                // Si estamos EDITANDO (currentEditingCursoId != null), mostramos TODOS los grados
-                // Si es NUEVA INSCRIPCIÓN, filtramos por grado
-                if (currentEditingCursoId) {
-                    renderCursoOptions(null, currentEditingCursoId);
-                } else {
-                    renderCursoOptions(objData.data.grado, null);
-                }
             } else {
                 previousEnrollmentData = null;
                 // No hay inscripción anterior, ocultar el contenedor
                 previousContainer.style.display = 'none';
                 previousInfo.innerHTML = '';
-                // Render all options (sin filtro de grado)
-                renderCursoOptions(null, currentEditingCursoId);
             }
         }
     };
@@ -398,21 +322,15 @@ function openModalInscripcion(alumnoId) {
     document.querySelector('#btnText').innerHTML = 'Guardar';
     document.querySelector('#formInscripcion').reset();
 
-    // Limpiar campos y ocultar información del curso
+    // Limpiar campos y ocultar información
     document.querySelector('#listPeriodoId').value = '';
-    document.querySelector('#listTurnoId').value = '';
     document.querySelector('#txtRepresentante').value = '';
     document.querySelector('#txtParentesco').value = '';
-    document.querySelector('#cursoInfoContainer').style.display = 'none';
-    document.querySelector('#cursoInfoContent').innerHTML = '';
 
     // Ocultar contenedor de inscripción anterior al abrir el modal
     document.querySelector('#previousEnrollmentContainer').style.display = 'none';
     document.querySelector('#previousEnrollmentInfo').innerHTML = '';
     previousEnrollmentData = null;
-
-    // Cargar todas las opciones necesarias
-    getOptionCursos();
 
     // Si se proporciona un alumno_id, cargar las opciones y preseleccionar
     if (alumnoId) {
@@ -437,7 +355,6 @@ function openModalInscripcion(alumnoId) {
 }
 
 function fntEditInscripcion(idInscripcion) {
-    currentEditingCursoId = null; // Reset inicial
     document.querySelector('#titleModal').innerHTML = 'Actualizar Inscripción';
     document.querySelector('.modal-header').classList.replace('headerRegister', 'updateRegister');
     document.querySelector('#btnActionForm').classList.replace('btn-primary', 'btn-info');
@@ -452,7 +369,6 @@ function fntEditInscripcion(idInscripcion) {
             var objData = JSON.parse(request.responseText);
             if (objData.status) {
                 document.querySelector('#idInscripcion').value = objData.data.inscripcion_id;
-                currentEditingCursoId = objData.data.curso_id; // Guardamos el curso actual
 
                 // Cargar alumnos y seleccionar
                 getOptionAlumnos(function () {
@@ -461,32 +377,10 @@ function fntEditInscripcion(idInscripcion) {
                     getPreviousEnrollment(objData.data.alumno_id);
                 });
 
-                // Cargar cursos y seleccionar
-                // Nota: Primero aseguramos que las opciones base estén cargadas
-                // Luego buscamos el curso específico. Si no está en filtrado inicial, quizás necesitemos lógica extra,
-                // pero por ahora asumimos que está en la lista global de cursosData.
-
-                // Forzar carga de opciones si está vacío
-                if (cursosData.length == 0) {
-                    var requestC = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
-                    var ajaxUrlC = './models/options/options-cursos.php';
-                    requestC.open('GET', ajaxUrlC, true);
-                    requestC.send();
-                    requestC.onreadystatechange = function () {
-                        if (requestC.readyState == 4 && requestC.status == 200) {
-                            cursosData = JSON.parse(requestC.responseText);
-                            // Renderizar opciones sin filtro de grado pero con filtro de cupo (pasando curso actual)
-                            renderCursoOptions(null, currentEditingCursoId);
-                            document.querySelector('#listCurso').value = objData.data.curso_id;
-                            updatePeriodoAndCursoInfo(true);
-                        }
-                    }
-                } else {
-                    renderCursoOptions(null, currentEditingCursoId); // Mostrar opciones con filtro de cupo
-                    document.querySelector('#listCurso').value = objData.data.curso_id;
-                    updatePeriodoAndCursoInfo(true);
-                }
-
+                document.querySelector('#listGrado').value = objData.data.grado_id;
+                document.querySelector('#listSeccion').value = objData.data.seccion_id;
+                document.querySelector('#listTurno').value = objData.data.turno_id;
+                document.querySelector('#listProfesor').value = objData.data.profesor_id;
                 document.querySelector('#listStatus').value = objData.data.estatusI;
 
                 $('#modalFormInscripcion').modal('show');

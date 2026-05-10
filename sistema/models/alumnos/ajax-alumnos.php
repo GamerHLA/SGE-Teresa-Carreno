@@ -143,7 +143,7 @@ if (!empty($_POST)) {
     try {
         // Verificar si la cédula ya existe (excepto para el alumno actual) - solo si hay cédula
         if (!empty($cedula) && $cedula !== null) {
-            $sql = "SELECT alumno_id FROM alumnos WHERE cedula = ? AND alumno_id != ? AND cedula != ''";
+            $sql = "SELECT a.id_alumnos FROM alumnos a INNER JOIN personas p ON a.id_alumnos = p.id_persona WHERE p.cedula = ? AND a.id_alumnos != ?";
             $query = $pdo->prepare($sql);
             $query->execute([$cedula, $idAlumno]);
 
@@ -154,7 +154,7 @@ if (!empty($_POST)) {
         }
 
         // Obtener el ID del representante por su cédula
-        $sqlRep = "SELECT representantes_id FROM representantes WHERE cedula = ? AND estatus = 1";
+        $sqlRep = "SELECT r.id_representates as representantes_id FROM representantes r INNER JOIN personas p ON r.id_representates = p.id_persona WHERE p.cedula = ? AND r.estatus = 1";
         $queryRep = $pdo->prepare($sqlRep);
         $queryRep->execute([$cedulaRepresentante]);
         $representante = $queryRep->fetch(PDO::FETCH_ASSOC);
@@ -174,29 +174,41 @@ if (!empty($_POST)) {
         $pdo->beginTransaction();
 
         if ($idAlumno == 0) {
-            // Consulta INSERT para nuevo alumno - Siempre con estatus = 1 (Activo)
-            $sql = "INSERT INTO alumnos (id_nacionalidades, cedula, nombre, apellido, fecha_nac, sexo, edad, id_estado, id_ciudad, id_municipio, id_parroquia, estatus) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
-            $params = [$idNacionalidad, $cedulaFinal, $nombre, $apellido, $fechaNac, $sexo, $edad, $idEstado, $idCiudad, $idMunicipio, $idParroquia];
-            $query = $pdo->prepare($sql);
-            $success = $query->execute($params);
-
-            if ($success) {
-                $idAlumno = $pdo->lastInsertId(); // Obtener el ID del alumno insertado
-                $msg = 'Alumno creado correctamente';
-            } else {
-                throw new Exception('Error al insertar el alumno');
-            }
+            // Generar IDs
+            $idDireccion = $pdo->query("SELECT COALESCE(MAX(id_direccion), 0) + 1 FROM direccion")->fetchColumn();
+            
+            // Insertar Dirección
+            $sqlDir = "INSERT INTO direccion (id_direccion, id_estados, id_municipios, id_parroquias, calle, cog_postal) VALUES (?, ?, ?, ?, '', 0)";
+            $pdo->prepare($sqlDir)->execute([$idDireccion, $idEstado, $idMunicipio, $idParroquia]);
+            
+            $idPersona = $pdo->query("SELECT COALESCE(MAX(id_persona), 0) + 1 FROM personas")->fetchColumn();
+            
+            // Insertar Persona
+            $sqlPers = "INSERT INTO personas (id_persona, id_nacionalidades, id_direccion, cedula, nombres, apellidos, sexo, fecha_nacimiento, correo_electronico, telefono) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', '')";
+            $pdo->prepare($sqlPers)->execute([$idPersona, $idNacionalidad, $idDireccion, $cedulaFinal, $nombre, $apellido, $sexo, $fechaNac]);
+            
+            // Insertar Alumno
+            // Nota: id_alumnos = id_persona
+            $idAlumno = $idPersona;
+            $sqlAlum = "INSERT INTO alumnos (id_alumnos, id_direccion, estatus, actividad_extra, talla_camisa, talla_pantalon) VALUES (?, ?, 1, '', '', '')";
+            $pdo->prepare($sqlAlum)->execute([$idAlumno, $idDireccion]);
+            
+            // Actualizar relacion en personas
+            $pdo->prepare("UPDATE personas SET alumnos_id = ? WHERE id_persona = ?")->execute([$idAlumno, $idPersona]);
+            
+            $msg = 'Alumno creado correctamente';
         } else {
-            // Consulta UPDATE para alumno existente - NO modifica estatus (se maneja con botones activar/desactivar)
-            $sql = "UPDATE alumnos SET id_nacionalidades = ?, cedula = ?, nombre = ?, apellido = ?, 
-                    fecha_nac = ?, sexo = ?, edad = ?, id_estado = ?, id_ciudad = ?, id_municipio = ?, id_parroquia = ? WHERE alumno_id = ?";
-            $params = [$idNacionalidad, $cedulaFinal, $nombre, $apellido, $fechaNac, $sexo, $edad, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $idAlumno];
-            $query = $pdo->prepare($sql);
-            $success = $query->execute($params);
-
-            if (!$success) {
-                throw new Exception('Error al actualizar el alumno');
+            // Actualizar Persona
+            $sqlPersUpdate = "UPDATE personas SET id_nacionalidades = ?, cedula = ?, nombres = ?, apellidos = ?, fecha_nacimiento = ?, sexo = ? WHERE id_persona = ?";
+            $pdo->prepare($sqlPersUpdate)->execute([$idNacionalidad, $cedulaFinal, $nombre, $apellido, $fechaNac, $sexo, $idAlumno]);
+            
+            // Obtener id_direccion actual
+            $idDir = $pdo->query("SELECT id_direccion FROM personas WHERE id_persona = " . intval($idAlumno))->fetchColumn();
+            if ($idDir) {
+                // Actualizar Direccion
+                $sqlDirUpdate = "UPDATE direccion SET id_estados = ?, id_municipios = ?, id_parroquias = ? WHERE id_direccion = ?";
+                $pdo->prepare($sqlDirUpdate)->execute([$idEstado, $idMunicipio, $idParroquia, $idDir]);
             }
             $msg = 'Alumno actualizado correctamente';
         }
@@ -212,20 +224,20 @@ if (!empty($_POST)) {
             $queryDesactivarPrincipal->execute([$idAlumno]);
 
             // SEGUNDO: Verificar si ya existe una relación con este representante (puede estar inactiva o como secundario)
-            $sqlRel = "SELECT relacion_id FROM alumno_representante WHERE alumno_id = ? AND representante_id = ?";
+            $sqlRel = "SELECT relacion_id FROM alumno_representante WHERE alumno_id = ? AND representantes_id = ?";
             $queryRel = $pdo->prepare($sqlRel);
             $queryRel->execute([$idAlumno, $representanteId]);
             $relacionExistente = $queryRel->fetch(PDO::FETCH_ASSOC);
 
             if ($relacionExistente) {
                 // Actualizar relación existente: poner como principal y activo
-                $sqlUpdRel = "UPDATE alumno_representante SET parentesco_id = ?, es_principal = 1, estatus = 1 
+                $sqlUpdRel = "UPDATE alumno_representante SET parentesco_id = ?, es_principal = 1, status = 1 
                              WHERE relacion_id = ?";
                 $queryUpdRel = $pdo->prepare($sqlUpdRel);
                 $queryUpdRel->execute([$parentescoId, $relacionExistente['relacion_id']]);
             } else {
                 // Insertar nueva relación como principal
-                $sqlInsRel = "INSERT INTO alumno_representante (alumno_id, representante_id, parentesco_id, es_principal, estatus) 
+                $sqlInsRel = "INSERT INTO alumno_representante (alumno_id, representantes_id, parentesco_id, es_principal, status) 
                              VALUES (?, ?, ?, 1, 1)";
                 $queryInsRel = $pdo->prepare($sqlInsRel);
                 $queryInsRel->execute([$idAlumno, $representanteId, $parentescoId]);
@@ -270,7 +282,7 @@ if (!empty($_POST)) {
         // 2. Si se envió un segundo representante, activarlo/insertarlo
         if (!empty($cedulaRepresentante2)) {
             // Buscar ID del rep 2
-            $sqlRep2 = "SELECT representantes_id FROM representantes WHERE cedula = ? AND estatus = 1";
+            $sqlRep2 = "SELECT r.id_representates as representantes_id FROM representantes r INNER JOIN personas p ON r.id_representates = p.id_persona WHERE p.cedula = ? AND r.estatus = 1";
             $queryRep2 = $pdo->prepare($sqlRep2);
             $queryRep2->execute([$cedulaRepresentante2]);
             $representante2 = $queryRep2->fetch(PDO::FETCH_ASSOC);
@@ -281,20 +293,20 @@ if (!empty($_POST)) {
             $representanteId2 = intval($representante2['representantes_id']);
 
             // Verificar si ya existe relación (incluso si estaba inactiva o era principal antes - aunque si era principal ahora será secundario)
-            $sqlRel2 = "SELECT relacion_id FROM alumno_representante WHERE alumno_id = ? AND representante_id = ?";
+            $sqlRel2 = "SELECT relacion_id FROM alumno_representante WHERE alumno_id = ? AND representantes_id = ?";
             $queryRel2 = $pdo->prepare($sqlRel2);
             $queryRel2->execute([$idAlumno, $representanteId2]);
             $relacionExistente2 = $queryRel2->fetch(PDO::FETCH_ASSOC);
 
             if ($relacionExistente2) {
                 // Actualizar: poner como secundario y activo
-                $sqlUpdRel2 = "UPDATE alumno_representante SET parentesco_id = ?, es_principal = 0, estatus = 1
+                $sqlUpdRel2 = "UPDATE alumno_representante SET parentesco_id = ?, es_principal = 0, status = 1
                              WHERE relacion_id = ?";
                 $queryUpdRel2 = $pdo->prepare($sqlUpdRel2);
                 $queryUpdRel2->execute([$parentescoId2, $relacionExistente2['relacion_id']]);
             } else {
                 // Insertar nueva relación secundaria
-                $sqlInsRel2 = "INSERT INTO alumno_representante (alumno_id, representante_id, parentesco_id, es_principal, estatus)
+                $sqlInsRel2 = "INSERT INTO alumno_representante (alumno_id, representantes_id, parentesco_id, es_principal, status)
                              VALUES (?, ?, ?, 0, 1)";
                 $queryInsRel2 = $pdo->prepare($sqlInsRel2);
                 $queryInsRel2->execute([$idAlumno, $representanteId2, $parentescoId2]);

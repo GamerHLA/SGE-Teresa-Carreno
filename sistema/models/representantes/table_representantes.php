@@ -5,16 +5,24 @@ require_once '../../includes/config.php';
 try {
     // Consulta SQL para obtener todos los representantes con estatus diferente de 0
     $sql = "SELECT 
-                r.*,
-                e.estado as nombre_estado,
-                c.ciudad as nombre_ciudad,
-                m.municipio as nombre_municipio,
-                p.parroquia as nombre_parroquia
+                r.id_representates AS representantes_id,
+                p.cedula,
+                p.nombres AS nombre,
+                p.apellidos AS apellido,
+                p.sexo,
+                p.telefono,
+                p.correo_electronico AS correo,
+                r.estatus,
+                e.descripcion as nombre_estado,
+                NULL as nombre_ciudad,
+                m.descripcion as nombre_municipio,
+                pa.descripcion as nombre_parroquia
             FROM representantes r
-            LEFT JOIN estados e ON r.id_estado = e.id_estado
-            LEFT JOIN ciudades c ON r.id_ciudad = c.id_ciudad
-            LEFT JOIN municipios m ON r.id_municipio = m.id_municipio
-            LEFT JOIN parroquias p ON r.id_parroquia = p.id_parroquia
+            INNER JOIN personas p ON r.id_representates = p.id_persona
+            LEFT JOIN direccion d ON p.id_direccion = d.id_direccion
+            LEFT JOIN estados e ON d.id_estados = e.id_estado
+            LEFT JOIN municipios m ON d.id_municipios = m.id_municipios
+            LEFT JOIN parroquias pa ON d.id_parroquias = pa.id_parroquias
             WHERE r.estatus != 2";
 
     $query = $pdo->prepare($sql);

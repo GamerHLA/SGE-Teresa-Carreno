@@ -40,14 +40,45 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="exampleSelect1">Seleccione Grado/Sección</label>
-                        <select class="form-control" name="listCurso" id="listCurso" required>
-                            <option value="">Seleccionar Grado/Sección</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="listGrado">Grado</label>
+                                <select class="form-control" name="listGrado" id="listGrado" required>
+                                    <option value="">Seleccionar Grado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="listSeccion">Sección</label>
+                                <select class="form-control" name="listSeccion" id="listSeccion" required>
+                                    <option value="">Seleccionar Sección</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Alerta de Repitencia (se muestra si el grado/sección es igual al anterior) -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="listTurno">Turno</label>
+                                <select class="form-control" name="listTurno" id="listTurno" required>
+                                    <option value="">Seleccionar Turno</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="listProfesor">Profesor Asignado</label>
+                                <select class="form-control" name="listProfesor" id="listProfesor" required>
+                                    <option value="">Seleccionar Profesor</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerta de Repitencia (se muestra si el grado es igual al anterior) -->
                     <div class="form-group" id="repetitionWarningContainer" style="display: none;">
                         <div class="alert alert-warning" style="margin-bottom: 0;">
                             <h5 class="alert-heading">¡Atención!</h5>
@@ -63,19 +94,8 @@
                         </div>
                     </div>
 
-                    <!-- Información del Curso Seleccionado -->
-                    <div class="form-group" id="cursoInfoContainer" style="display: none;">
-                        <label>Información del Curso</label>
-                        <div class="card border-info" style="background-color: #f8f9fa;">
-                            <div class="card-body" id="cursoInfoContent">
-                                <!-- La información del curso se mostrará aquí -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campos ocultos para periodo_id y turno_id -->
+                    <!-- Campo oculto para periodo_id -->
                     <input type="hidden" name="listPeriodoId" id="listPeriodoId" value="">
-                    <input type="hidden" name="listTurnoId" id="listTurnoId" value="">
                     <div class="form-group d-none">
                         <label for="exampleSelect1">Estado</label>
                         <select class="form-control" name="listStatus" id="listStatus" required>

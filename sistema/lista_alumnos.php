@@ -240,5 +240,6 @@ function toggleVista() {
 </script>
 
 <?php require_once 'includes/footer.php'; ?>
+<script src="js/functions-inscripcion.js?v=<?= time(); ?>"></script>
 <script src="js/functions-alumnos.js?v=<?= time(); ?>"></script>
 <script src="js/functions_info_alumnos.js?v=<?= time(); ?>"></script>

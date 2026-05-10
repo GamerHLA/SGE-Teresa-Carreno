@@ -29,26 +29,22 @@ try {
                 p.nombres AS nombre,
                 p.apellidos AS apellido,
                 p.sexo,
-                p.id_estado,
-                p.id_ciudad,
-                p.id_municipio,
-                p.id_parroquia,
                 p.telefono,
                 p.correo_electronico AS correo,
                 pr.es_director,
                 pr.status AS estatus,
                 pr.director_fecha_inicio,
                 pr.director_fecha_fin,
-                e.estado as nombre_estado,
-                c.ciudad as nombre_ciudad,
-                m.municipio as nombre_municipio,
-                pa.parroquia as nombre_parroquia
+                e.descripcion as nombre_estado,
+                NULL as nombre_ciudad,
+                m.descripcion as nombre_municipio,
+                pa.descripcion as nombre_parroquia
             FROM profesores pr
-            LEFT JOIN personas p ON p.profesores_id = pr.profesor_id
-            LEFT JOIN estados e ON p.id_estado = e.id_estado
-            LEFT JOIN ciudades c ON p.id_ciudad = c.id_ciudad
-            LEFT JOIN municipios m ON p.id_municipio = m.id_municipio
-            LEFT JOIN parroquias pa ON p.id_parroquia = pa.id_parroquia
+            INNER JOIN personas p ON pr.profesor_id = p.id_persona
+            LEFT JOIN direccion d ON p.id_direccion = d.id_direccion
+            LEFT JOIN estados e ON d.id_estados = e.id_estado
+            LEFT JOIN municipios m ON d.id_municipios = m.id_municipios
+            LEFT JOIN parroquias pa ON d.id_parroquias = pa.id_parroquias
             WHERE pr.status != 0";
     $data = $query->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

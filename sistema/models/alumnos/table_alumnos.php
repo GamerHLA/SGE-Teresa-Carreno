@@ -8,41 +8,50 @@ try {
     // Incluye JOIN con alumno_representante y representantes para obtener nombre y parentesco
     // Y JOIN con tablas de dirección
     $sql = "SELECT 
-                a.*,
-                r.nombre as rep_nombre,
-                r.apellido as rep_apellido,
-                r.cedula as rep_cedula,
-                r.estatus as rep_estatus,
-                p_rel.parentesco as parentesco,
-                r2.nombre as rep2_nombre,
-                r2.apellido as rep2_apellido,
-                r2.cedula as rep2_cedula,
-                r2.estatus as rep2_estatus,
-                n.codigo as rep_nacionalidad,
-                n2.codigo as rep2_nacionalidad,
-                p_rel2.parentesco as parentesco2,
-                ar.estatus as rel_estatus,
-                ar2.estatus as rel2_estatus,
-                e.estado as nombre_estado,
-                c.ciudad as nombre_ciudad,
-                m.municipio as nombre_municipio,
-                p.parroquia as nombre_parroquia,
+                a.id_alumnos AS alumno_id,
+                a.estatus,
+                p.nombres AS nombre,
+                p.apellidos AS apellido,
+                p.cedula,
+                p.sexo,
+                p.fecha_nacimiento AS fecha_nac,
+                pr.nombres AS rep_nombre,
+                pr.apellidos AS rep_apellido,
+                pr.cedula AS rep_cedula,
+                r.estatus AS rep_estatus,
+                p_rel.parentesco AS parentesco,
+                pr2.nombres AS rep2_nombre,
+                pr2.apellidos AS rep2_apellido,
+                pr2.cedula AS rep2_cedula,
+                r2.estatus AS rep2_estatus,
+                n.codigo AS rep_nacionalidad,
+                n2.codigo AS rep2_nacionalidad,
+                p_rel2.parentesco AS parentesco2,
+                ar.status AS rel_estatus,
+                ar2.status AS rel2_estatus,
+                e.descripcion AS nombre_estado,
+                NULL AS nombre_ciudad,
+                m.descripcion AS nombre_municipio,
+                pa.descripcion AS nombre_parroquia,
 
-                (SELECT COUNT(*) FROM inscripcion i WHERE i.alumno_id = a.alumno_id AND i.estatusI != 0) as is_inscrito,
-                (SELECT i.inscripcion_id FROM inscripcion i INNER JOIN curso c ON i.curso_id = c.curso_id INNER JOIN periodo_escolar pe ON c.periodo_id = pe.periodo_id WHERE i.alumno_id = a.alumno_id AND i.estatusI = 1 AND pe.estatus = 1 LIMIT 1) as active_inscripcion_id
+                (SELECT COUNT(*) FROM inscripcion i WHERE i.alumno_id = a.id_alumnos AND i.status != 0) as is_inscrito,
+                (SELECT i.inscripcion_id FROM inscripcion i INNER JOIN periodo_escolar pe ON i.periodo_id = pe.periodo_id WHERE i.alumno_id = a.id_alumnos AND i.status = 1 AND pe.estatus = 1 LIMIT 1) as active_inscripcion_id
             FROM alumnos a
-            LEFT JOIN alumno_representante ar ON a.alumno_id = ar.alumno_id AND ar.es_principal = 1
-            LEFT JOIN representantes r ON ar.representante_id = r.representantes_id
-            LEFT JOIN nacionalidades n ON r.id_nacionalidades = n.id
-            LEFT JOIN parentesco p_rel ON ar.parentesco_id = p_rel.id_parentesco
-            LEFT JOIN alumno_representante ar2 ON a.alumno_id = ar2.alumno_id AND ar2.es_principal = 0
-            LEFT JOIN representantes r2 ON ar2.representante_id = r2.representantes_id
-            LEFT JOIN nacionalidades n2 ON r2.id_nacionalidades = n2.id
-            LEFT JOIN parentesco p_rel2 ON ar2.parentesco_id = p_rel2.id_parentesco
-            LEFT JOIN estados e ON a.id_estado = e.id_estado
-            LEFT JOIN ciudades c ON a.id_ciudad = c.id_ciudad
-            LEFT JOIN municipios m ON a.id_municipio = m.id_municipio
-            LEFT JOIN parroquias p ON a.id_parroquia = p.id_parroquia
+            INNER JOIN personas p ON a.id_alumnos = p.id_persona
+            LEFT JOIN direccion d ON p.id_direccion = d.id_direccion
+            LEFT JOIN estados e ON d.id_estados = e.id_estado
+            LEFT JOIN municipios m ON d.id_municipios = m.id_municipios
+            LEFT JOIN parroquias pa ON d.id_parroquias = pa.id_parroquias
+            LEFT JOIN alumno_representante ar ON a.id_alumnos = ar.alumno_id AND ar.es_principal = 1
+            LEFT JOIN representantes r ON ar.representantes_id = r.id_representates
+            LEFT JOIN personas pr ON r.id_representates = pr.id_persona
+            LEFT JOIN nacionalidades n ON pr.id_nacionalidades = n.id_nacionalidades
+            LEFT JOIN parentescos p_rel ON ar.parentesco_id = p_rel.id_parentesco
+            LEFT JOIN alumno_representante ar2 ON a.id_alumnos = ar2.alumno_id AND ar2.es_principal = 0
+            LEFT JOIN representantes r2 ON ar2.representantes_id = r2.id_representates
+            LEFT JOIN personas pr2 ON r2.id_representates = pr2.id_persona
+            LEFT JOIN nacionalidades n2 ON pr2.id_nacionalidades = n2.id_nacionalidades
+            LEFT JOIN parentescos p_rel2 ON ar2.parentesco_id = p_rel2.id_parentesco
             WHERE a.estatus != 0";
 
     $query = $pdo->prepare($sql); // Prepara la consulta SQL para ejecución
@@ -53,7 +62,7 @@ try {
     if (strpos($e->getMessage(), "doesn't exist") !== false || strpos($e->getMessage(), "Table") !== false) {
         error_log("Tabla alumno_representante no existe. Ejecutar: create_alumno_representante_table.sql");
         // Consulta alternativa sin JOIN
-        $sql = "SELECT * FROM alumnos WHERE estatus != 0";
+        $sql = "SELECT a.id_alumnos AS alumno_id, a.estatus, p.nombres AS nombre, p.apellidos AS apellido, p.cedula, p.sexo, p.fecha_nacimiento AS fecha_nac FROM alumnos a INNER JOIN personas p ON a.id_alumnos = p.id_persona WHERE a.estatus != 0";
         $query = $pdo->prepare($sql);
         $query->execute();
         $data = $query->fetchAll(PDO::FETCH_ASSOC);
@@ -158,9 +167,16 @@ for ($i = 0; $i < count($data); $i++) {
     }
     $data[$i]['direccion'] = $direccionCompleta;
 
-    // Formatear fecha de nacimiento
+    // Formatear fecha de nacimiento y calcular edad
     if (!empty($data[$i]['fecha_nac'])) {
-        $data[$i]['fecha_nac'] = date('d/m/Y', strtotime($data[$i]['fecha_nac']));
+        $fechaNacObj = new DateTime($data[$i]['fecha_nac']);
+        $hoy = new DateTime();
+        $edad = $hoy->diff($fechaNacObj)->y;
+        $data[$i]['edad'] = $edad . ' años';
+        $data[$i]['fecha_nac'] = $fechaNacObj->format('d/m/Y');
+    } else {
+        $data[$i]['edad'] = 'N/A';
+        $data[$i]['fecha_nac'] = 'N/A';
     }
 
     // Crea la columna de opciones con botones para editar, eliminar e inscribir

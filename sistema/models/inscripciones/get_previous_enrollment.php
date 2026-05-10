@@ -5,8 +5,6 @@ if (!empty($_GET['alumno_id'])) {
     $alumnoId = intval($_GET['alumno_id']);
 
     try {
-        // Consultar la inscripción más reciente del alumno
-        // Ordenar por periodo (año más reciente) y limitar a 1 resultado
         $sql = "SELECT 
                     i.inscripcion_id, 
                     g.grado, 
@@ -16,12 +14,11 @@ if (!empty($_GET['alumno_id'])) {
                     pe.anio_inicio,
                     pe.anio_fin
                 FROM inscripcion i
-                INNER JOIN curso c ON i.curso_id = c.curso_id
-                INNER JOIN grados g ON c.grados_id = g.id_grado
-                INNER JOIN seccion s ON c.seccion_id = s.id_seccion
-                INNER JOIN periodo_escolar pe ON c.periodo_id = pe.periodo_id
+                INNER JOIN grados g ON i.grado_id = g.id_grado
+                INNER JOIN secciones s ON i.seccion_id = s.id_seccion
+                INNER JOIN periodo_escolar pe ON i.periodo_id = pe.periodo_id
                 INNER JOIN turno t ON i.turno_id = t.turno_id
-                WHERE i.alumno_id = ? AND i.estatusI != 0
+                WHERE i.alumno_id = ? AND i.status != 0
                 ORDER BY pe.anio_inicio DESC, pe.anio_fin DESC
                 LIMIT 1";
 

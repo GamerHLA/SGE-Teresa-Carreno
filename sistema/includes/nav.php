@@ -82,6 +82,7 @@
         </a>
       </li>
     <?php } ?>
+    <!--
     <li>
       <?php if ($_SESSION['rol'] == 1) { ?>
         <a class="app-menu__item" href="lista_cursos.php">
@@ -90,6 +91,7 @@
         </a>
       </li>
     <?php } ?>
+    -->
 
     <?php if ($_SESSION['rol'] == 1 || $_SESSION['rol'] == 2) { ?>
       <li>

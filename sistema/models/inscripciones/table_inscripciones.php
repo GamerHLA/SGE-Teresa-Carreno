@@ -24,14 +24,11 @@ try {
         $wherePeriodo = " AND pe.periodo_id = $periodo_id ";
     }
 
-    // Consulta SQL mejorada con todos los campos necesarios
     $sql = "SELECT 
                 i.inscripcion_id,
                 i.alumno_id,
-                i.curso_id,
                 i.turno_id,
-                i.estatusI,
-                c.estatusC,
+                i.status as estatusI,
                 pe.estatus as estatusPeriodo,
                 a.nombre as alumno_nombre,
                 a.apellido as alumno_apellido,
@@ -46,12 +43,11 @@ try {
             FROM inscripcion as i 
             INNER JOIN alumnos as a ON i.alumno_id = a.alumno_id 
             LEFT JOIN nacionalidades as n ON a.id_nacionalidades = n.id
-            INNER JOIN curso as c ON i.curso_id = c.curso_id 
-            INNER JOIN grados as g ON c.grados_id = g.id_grado
-            INNER JOIN seccion as s ON c.seccion_id = s.id_seccion
-            INNER JOIN periodo_escolar as pe ON c.periodo_id = pe.periodo_id 
+            INNER JOIN grados as g ON i.grado_id = g.id_grado
+            INNER JOIN secciones as s ON i.seccion_id = s.id_seccion
+            INNER JOIN periodo_escolar as pe ON i.periodo_id = pe.periodo_id 
             INNER JOIN turno as t ON i.turno_id = t.turno_id 
-            WHERE i.estatusI != 0 
+            WHERE i.status != 0 
                 AND pe.estatus = 1
                 $wherePeriodo
             ORDER BY i.inscripcion_id DESC";
@@ -87,8 +83,8 @@ try {
         $data[$i]['turno'] = $data[$i]['turno'] ? $data[$i]['turno'] : 'N/A';
 
         // Formatear estatus
-        // Si el curso o el periodo están inactivos, la inscripción se muestra inactiva
-        $isActivo = $data[$i]['estatusI'] == 1 && $data[$i]['estatusC'] == 1 && $data[$i]['estatusPeriodo'] == 1;
+        // Si el periodo está inactivo, la inscripción se muestra inactiva
+        $isActivo = $data[$i]['estatusI'] == 1 && $data[$i]['estatusPeriodo'] == 1;
 
         if ($isActivo) {
             $data[$i]['estatusI'] = '<span class="badge badge-success">Activo</span>';
