@@ -21,7 +21,7 @@ $host = 'localhost';
 $port = '5432';
 $user = 'postgres';
 $db = 'base';
-$pass = '040278'; // IMPORTANTE: Cambia esta contraseña por la de tu servidor PostgreSQL
+$pass = '1234'; // IMPORTANTE: Cambia esta contraseña por la de tu servidor PostgreSQL
 
 try {
     // Conexión a PostgreSQL usando PDO

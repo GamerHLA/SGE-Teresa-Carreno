@@ -333,4 +333,145 @@ function openModalPeriodo() {
     document.querySelector('#formPeriodo').reset();
     $('#modalFormPeriodo').modal('show');
     actualizarInfoPeriodo();
+
+    // Forzar recarga de la tabla después de cualquier acción
+function forceReloadPeriodos() {
+    if (tablePeriodos) {
+        // Destruir y recrear la tabla para forzar actualización
+        tablePeriodos.destroy();
+        tablePeriodos = $('#tablePeriodos').DataTable({
+            "processing": true,
+            "serverSide": false,
+            "language": {
+                "sProcessing": "Procesando...",
+                "sLengthMenu": "Mostrar _MENU_ registros",
+                "sZeroRecords": "No se encontraron resultados",
+                "sEmptyTable": "Ningún dato disponible en esta tabla",
+                "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+                "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+                "sInfoPostFix": "",
+                "sSearch": "Buscar:",
+                "sUrl": "",
+                "sInfoThousands": ",",
+                "sLoadingRecords": "Cargando...",
+                "oPaginate": {
+                    "sFirst": "Primero",
+                    "sLast": "Último",
+                    "sNext": "Siguiente",
+                    "sPrevious": "Anterior"
+                },
+                "oAria": {
+                    "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+                    "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+                }
+            },
+            "ajax": {
+                "url": "./models/Periodo/table_periodo.php",
+                "dataSrc": "",
+                "cache": false  // Importante: evitar caché
+            },
+            "columns": [
+                {
+                    "data": null,
+                    "orderable": false,
+                    "searchable": false,
+                    "render": function (data, type, row, meta) {
+                        return meta.row + 1;
+                    }
+                },
+                { "data": "periodo_completo" },
+                { "data": "estatus" },
+                { "data": "options" }
+            ],
+            "responsive": true,
+            "destroy": true,
+            "pageLength": 10,
+            "order": [[0, "asc"]]
+        });
+    }
+}
+
+// Modifica las funciones existentes
+function delPeriodo() {
+    var btnDelPeriodo = document.querySelectorAll('.btnDelPeriodo');
+    btnDelPeriodo.forEach(function (btnDelPeriodo) {
+        btnDelPeriodo.onclick = function () {
+            var idPeriodo = this.getAttribute('rl');
+            
+            swal({
+                title: "¿Realmente desea inhabilitar el período escolar?",
+                text: "Al inhabilitar el período escolar no se podrá realizar ninguna acción.",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, inhabilitar",
+                cancelButtonText: "No, cancelar",
+                closeOnConfirm: false,
+                closeOnCancel: true
+            }, function (Confirm) {
+                if (Confirm) {
+                    var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+                    var ajaxUrl = './models/Periodo/delet_periodo.php';
+                    var strData = "idPeriodo=" + idPeriodo;
+                    request.open('POST', ajaxUrl, true);
+                    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                    request.send(strData);
+                    request.onreadystatechange = function () {
+                        if (request.readyState == 4 && request.status == 200) {
+                            var objData = JSON.parse(request.responseText);
+                            if (objData.status) {
+                                swal("¡Inhabilitado!", objData.msg, "success");
+                                // FORZAR RECARGA COMPLETA DE LA TABLA
+                                forceReloadPeriodos();
+                            } else {
+                                swal("Atención", objData.msg, "error");
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+}
+
+function activatePeriodo() {
+    var btnActivatePeriodo = document.querySelectorAll('.btnActivatePeriodo');
+    btnActivatePeriodo.forEach(function (btnActivatePeriodo) {
+        btnActivatePeriodo.onclick = function () {
+            var idPeriodo = this.getAttribute('rl');
+            
+            swal({
+                title: "Activar Período Escolar",
+                text: "¿Realmente desea activar el período escolar?",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, activar",
+                cancelButtonText: "No, cancelar",
+                closeOnConfirm: false,
+                closeOnCancel: true
+            }, function (Confirm) {
+                if (Confirm) {
+                    var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+                    var ajaxActivatePeriodo = './models/Periodo/active_periodo.php';
+                    var strData = "idPeriodo=" + idPeriodo;
+                    request.open('POST', ajaxActivatePeriodo, true);
+                    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                    request.send(strData);
+                    request.onreadystatechange = function () {
+                        if (request.readyState == 4 && request.status == 200) {
+                            var objData = JSON.parse(request.responseText);
+                            if (objData.status) {
+                                swal("¡Activado!", objData.msg, "success");
+                                // FORZAR RECARGA COMPLETA DE LA TABLA
+                                forceReloadPeriodos();
+                            } else {
+                                swal("Atención", objData.msg, "error");
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+}
 }

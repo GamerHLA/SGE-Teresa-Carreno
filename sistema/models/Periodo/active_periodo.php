@@ -1,5 +1,4 @@
 <?php
-
 require_once '../../includes/config.php';
 
 if ($_POST) {
@@ -19,21 +18,15 @@ if ($_POST) {
         $result = $query->execute(array($idPeriodo));
 
         if ($result) {
-            // Activar también los cursos asociados a este periodo (que no estén eliminados estatusC != 0)
-            $sqlCursos = "UPDATE curso SET estatusC = 1 WHERE periodo_id = ? AND estatusC != 0";
-            $queryCursos = $pdo->prepare($sqlCursos);
-            $queryCursos->execute(array($idPeriodo));
-
-            // Activar también las inscripciones asociadas a los alumnos activos
+            // Reactivar inscripciones asociadas a alumnos activos
             $sqlInscripciones = "UPDATE inscripcion i 
-                                 INNER JOIN curso c ON i.curso_id = c.curso_id 
-                                 INNER JOIN alumnos a ON i.alumno_id = a.alumno_id
-                                 SET i.estatusI = 1 
-                                 WHERE c.periodo_id = ? AND i.estatusI = 2 AND a.estatus = 1";
+                                 INNER JOIN alumnos a ON i.alumno_id = a.id_alumnos
+                                 SET i.status = 1 
+                                 WHERE i.periodo_id = ? AND i.status = 2 AND a.estatus = 1";
             $queryInscripciones = $pdo->prepare($sqlInscripciones);
             $queryInscripciones->execute(array($idPeriodo));
 
-            $arrResponse = array('status' => true, 'msg' => 'Período escolar, sus cursos e inscripciones reactivados correctamente');
+            $arrResponse = array('status' => true, 'msg' => 'Período escolar e inscripciones reactivados correctamente');
         } else {
             $arrResponse = array('status' => false, 'msg' => 'Error al activar el período escolar');
         }

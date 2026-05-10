@@ -70,7 +70,7 @@
       <!-- Sidebar toggle button--><a class="app-sidebar__toggle" href="#" data-toggle="sidebar"
         aria-label="Hide Sidebar"><i class="fas fa-bars"></i></a>
       <!-- Logo después del botón -->
-      <a class="app-header__logo" href="./index.php">Sistema Escolar</a>
+      <a class="app-header__logo" href="./index.php">SISTEMA ESCOLAR</a>
     </div>
 
     <!-- Navbar Right Menu-->

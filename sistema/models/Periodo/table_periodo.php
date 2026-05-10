@@ -1,5 +1,4 @@
 <?php
-
 require_once '../../includes/config.php';
 
 $sql = "SELECT *, CONCAT(anio_inicio, ' - ', anio_fin) as periodo_completo FROM periodo_escolar WHERE estatus != 0 ORDER BY anio_inicio DESC";
@@ -21,3 +20,4 @@ for ($i = 0; $i < count($data); $i++) {
 }
 echo json_encode($data, JSON_UNESCAPED_UNICODE);
 die();
+?>

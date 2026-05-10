@@ -92,36 +92,22 @@ if (!empty($_POST)) {
             $query = $pdo->prepare($sql);
             $success = $query->execute([$anioInicio, $anioFin, $status, $idPeriodo]);
 
-            // Si el período se está inactivando (status = 2), inactivar todos los cursos e inscripciones asociadas
+            // Si el período se está inactivando (status = 2), inactivar todas las inscripciones asociadas
             if ($success && $status == 2) {
-                // Inactivar cursos
-                $sqlInactivateCursos = "UPDATE curso SET estatusC = 2 WHERE periodo_id = ? AND estatusC = 1";
-                $queryInactivateCursos = $pdo->prepare($sqlInactivateCursos);
-                $queryInactivateCursos->execute([$idPeriodo]);
-
-                // Inactivar inscripciones asociadas a los cursos de este periodo (solo las que estaban activas)
-                $sqlInactivateInscripciones = "UPDATE inscripcion i 
-                                               INNER JOIN curso c ON i.curso_id = c.curso_id 
-                                               SET i.estatusI = 2 
-                                               WHERE c.periodo_id = ? AND i.estatusI = 1";
+                // Inactivar inscripciones activas de este periodo
+                $sqlInactivateInscripciones = "UPDATE inscripcion SET status = 2 
+                                               WHERE periodo_id = ? AND status = 1";
                 $queryInactivateInscripciones = $pdo->prepare($sqlInactivateInscripciones);
                 $queryInactivateInscripciones->execute([$idPeriodo]);
             }
 
-            // Si el período se está activando (status = 1), activar cursos e inscripciones asociados
+            // Si el período se está activando (status = 1), activar inscripciones asociadas
             if ($success && $status == 1) {
-                // Activar cursos
-                $sqlActivateCursos = "UPDATE curso SET estatusC = 1 WHERE periodo_id = ? AND estatusC = 2";
-                $queryActivateCursos = $pdo->prepare($sqlActivateCursos);
-                $queryActivateCursos->execute([$idPeriodo]);
-
-                // Activar inscripciones asociadas a los cursos de este periodo
-                // SOLO si el alumno está activo (estatus = 1)
+                // Activar inscripciones de este periodo SOLO si el alumno está activo
                 $sqlActivateInscripciones = "UPDATE inscripcion i 
-                                             INNER JOIN curso c ON i.curso_id = c.curso_id 
-                                             INNER JOIN alumnos a ON i.alumno_id = a.alumno_id
-                                             SET i.estatusI = 1 
-                                             WHERE c.periodo_id = ? AND i.estatusI = 2 AND a.estatus = 1";
+                                             INNER JOIN alumnos a ON i.alumno_id = a.id_alumnos
+                                             SET i.status = 1 
+                                             WHERE i.periodo_id = ? AND i.status = 2 AND a.estatus = 1";
                 $queryActivateInscripciones = $pdo->prepare($sqlActivateInscripciones);
                 $queryActivateInscripciones->execute([$idPeriodo]);
             }
@@ -142,3 +128,4 @@ if (!empty($_POST)) {
 } else {
     echo json_encode(['status' => false, 'msg' => 'No se recibieron datos']);
 }
+?>
