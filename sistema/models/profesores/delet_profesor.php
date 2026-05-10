@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $queryObs->execute([$idProfesor, $observacionFinal]);
 
             // 4. Inhabilitar Profesor (Global)
-            $sql = "UPDATE profesor SET estatus = 2 WHERE profesor_id = ?";
+            $sql = "UPDATE profesores SET status = 2 WHERE profesor_id = ?";
             $query = $pdo->prepare($sql);
             $result = $query->execute([$idProfesor]);
 

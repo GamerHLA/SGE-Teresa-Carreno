@@ -119,52 +119,42 @@ if (!empty($_POST)) {
             if ($idRepresentantes > 0) {
                 try {
                     // Verificar si existe un profesor con la misma cédula
-                    $sqlCheckProf = "SELECT profesor_id FROM profesor WHERE cedula = ?";
+                    $sqlCheckProf = "SELECT pr.profesor_id, pp.id_persona FROM profesores pr 
+                                     INNER JOIN personas pp ON pp.profesores_id = pr.profesor_id 
+                                     WHERE pp.cedula = ?";
                     $queryCheckProf = $pdo->prepare($sqlCheckProf);
                     $queryCheckProf->execute([$cedula]);
                     $profesorExistente = $queryCheckProf->fetch(PDO::FETCH_ASSOC);
                     
                     if ($profesorExistente) {
-                        // Sincronizar datos del representante al profesor (SIN modificar estatus del profesor)
-                        $sqlSyncProf = "UPDATE profesor SET 
+                        // Sincronizar datos del representante al profesor a través de persona
+                        $sqlSyncProf = "UPDATE personas SET 
                                         id_nacionalidades = ?, 
-                                        nombre = ?, 
-                                        apellido = ?, 
+                                        nombres = ?, 
+                                        apellidos = ?, 
                                         sexo = ?, 
                                         id_estado = ?, 
                                         id_ciudad = ?, 
                                         id_municipio = ?, 
                                         id_parroquia = ?, 
                                         telefono = ?, 
-                                        correo = ?
-                                        WHERE cedula = ?";
-                        $paramsSyncProf = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $telefono, $email, $cedula];
+                                        correo_electronico = ?
+                                        WHERE id_persona = ?";
+                        $paramsSyncProf = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $telefono, $email, $profesorExistente['id_persona']];
                         $querySyncProf = $pdo->prepare($sqlSyncProf);
                         $querySyncProf->execute($paramsSyncProf);
                         
                         error_log("Sincronización representante->profesor exitosa para cédula: " . $cedula);
 
-                        // Sincronización con Usuarios (Vinculado al Profesor)
+                        // No se actualiza nombre en usuarios porque la tabla actual guarda la relación por id_persona
                         try {
-                            // Buscar si este profesor tiene un usuario asociado
-                            $sqlUser = "SELECT user_id FROM usuarios WHERE profesor_id = ?";
+                            $sqlUser = "SELECT id_usuario FROM usuarios WHERE id_persona = ?";
                             $queryUser = $pdo->prepare($sqlUser);
-                            $queryUser->execute([$profesorExistente['profesor_id']]);
+                            $queryUser->execute([$profesorExistente['id_persona']]);
                             $usuario = $queryUser->fetch(PDO::FETCH_ASSOC);
 
                             if ($usuario) {
-                                // Actualizar nombre del usuario
-                                $nombreCompleto = $nombre . ' ' . $apellido;
-                                $sqlUpdateUser = "UPDATE usuarios SET nombre = ? WHERE user_id = ?";
-                                $queryUpdateUser = $pdo->prepare($sqlUpdateUser);
-                                $queryUpdateUser->execute([$nombreCompleto, $usuario['user_id']]);
-                                error_log("Sincronización representante->usuario exitosa para user_id: " . $usuario['user_id']);
-
-                                // Actualizar sesión si es el usuario actual
-                                if (isset($_SESSION['idUser']) && $_SESSION['idUser'] == $usuario['user_id']) {
-                                    $_SESSION['nombre'] = $nombreCompleto;
-                                    $new_user_name_for_ui = $nombreCompleto;
-                                }
+                                error_log("Profesor vinculado a usuario id_usuario: " . $usuario['id_usuario']);
                             }
                         } catch (Exception $e) {
                             error_log("Error sincronizando usuario desde representante: " . $e->getMessage());

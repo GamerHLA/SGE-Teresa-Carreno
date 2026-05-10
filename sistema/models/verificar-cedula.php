@@ -21,21 +21,25 @@ if (empty($cedula) || empty($tipo)) {
 try {
     // Buscar en la tabla contraria SOLO por número de cédula (ignorando nacionalidad)
     if ($tipo == 'profesor') {
-        // Si estamos en el formulario de profesor, buscamos en REPRESENTANTES
-        $sql = "SELECT r.*, n.codigo as nacionalidad_codigo 
-                FROM representantes r 
-                INNER JOIN nacionalidades n ON r.id_nacionalidades = n.id 
-                WHERE r.cedula = ? AND r.estatus != 0";
+        // Si estamos en el formulario de profesor, buscamos en REPRESENTANTES usando personas
+        $sql = "SELECT r.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                       p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula, n.codigo as nacionalidad_codigo 
+                FROM personas p 
+                INNER JOIN representantes r ON p.representantes_id = r.id_representates 
+                LEFT JOIN nacionalidades n ON p.id_nacionalidades = n.id 
+                WHERE p.cedula = ? AND r.estatus != 0";
         $query = $pdo->prepare($sql);
         $query->execute([$cedula]);
         $datosPersona = $query->fetch(PDO::FETCH_ASSOC);
         
     } else if ($tipo == 'representante') {
-        // Si estamos en el formulario de representante, buscamos en PROFESORES
-        $sql = "SELECT p.*, n.codigo as nacionalidad_codigo 
-                FROM profesor p 
-                INNER JOIN nacionalidades n ON p.id_nacionalidades = n.id 
-                WHERE p.cedula = ? AND p.estatus != 0";
+        // Si estamos en el formulario de representante, buscamos en PROFESORES usando personas
+        $sql = "SELECT pr.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                       p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula, n.codigo as nacionalidad_codigo 
+                FROM personas p 
+                INNER JOIN profesores pr ON p.profesores_id = pr.profesor_id 
+                LEFT JOIN nacionalidades n ON p.id_nacionalidades = n.id 
+                WHERE p.cedula = ? AND pr.status != 0";
         $query = $pdo->prepare($sql);
         $query->execute([$cedula]);
         $datosPersona = $query->fetch(PDO::FETCH_ASSOC);

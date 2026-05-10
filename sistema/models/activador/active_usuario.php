@@ -5,7 +5,7 @@ require_once '../../includes/config.php';
 if ($_POST) {
     $idUsuario = $_POST['idUsuario'];
 
-    $sql = "UPDATE usuarios SET estatus = 1 WHERE user_id = ?";
+    $sql = "UPDATE usuarios SET estatus = 1 WHERE id_usuario = ?";
     $query = $pdo->prepare($sql);
     $result = $query->execute(array($idUsuario));
 

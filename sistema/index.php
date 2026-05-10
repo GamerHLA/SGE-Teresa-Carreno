@@ -136,7 +136,7 @@ require_once 'includes/header.php';
 
     <main class="app-content" style="display:flex; justify-content:center;">
         <div class="hero-content" style="text-align:center; max-width:550px;">
-            <h2>Bienvenido al sistema de inscripción</h2>
+            <h2>Bienvenido</h2>
             <div class="hero-text">
                 <h3>U.E.D "Teresa Carreño"</h3>
             </div>

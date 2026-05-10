@@ -46,7 +46,7 @@ require_once 'includes/Modals/modal_inscripcion.php';
 require_once 'includes/Modals/modal_info_alumno.php';
 
 // Verificar si existe un director activo
-$sqlDirector = "SELECT COUNT(*) as total FROM profesor WHERE es_director = 1";
+$sqlDirector = "SELECT COUNT(*) as total FROM profesores WHERE es_director = 1";
 $queryDirector = $pdo->prepare($sqlDirector);
 $queryDirector->execute();
 $hasDirector = $queryDirector->fetch(PDO::FETCH_ASSOC)['total'] > 0;

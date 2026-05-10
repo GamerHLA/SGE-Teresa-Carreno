@@ -27,7 +27,7 @@ if (!empty($_POST)) {
                         p.nombres, 
                         p.apellidos,
                         u.usuario, 
-                        u.contraseña,
+                        u.\"contraseña\" AS contraseña,
                         u.estatus, 
                         r.id as rol_id, 
                         r.nombre_rol 

@@ -21,25 +21,34 @@ try {
     $response = ['status' => true, 'existe' => false, 'msg' => '', 'data' => null];
 
     // 1. Buscar en ALUMNOS
-    $sqlAlumno = "SELECT * FROM alumnos WHERE cedula = ?";
+    $sqlAlumno = "SELECT a.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                         p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula, n.codigo as nacionalidad_codigo 
+                  FROM personas p 
+                  INNER JOIN alumnos a ON p.alumnos_id = a.id_alumnos 
+                  LEFT JOIN nacionalidades n ON p.id_nacionalidades = n.id 
+                  WHERE p.cedula = ?";
     $queryAlumno = $pdo->prepare($sqlAlumno);
     $queryAlumno->execute([$cedula]);
     $alumno = $queryAlumno->fetch(PDO::FETCH_ASSOC);
 
     // 2. Buscar en PROFESORES
-    $sqlProfesor = "SELECT p.*, n.codigo as nacionalidad_codigo 
-                    FROM profesor p 
-                    INNER JOIN nacionalidades n ON p.id_nacionalidades = n.id 
-                    WHERE p.cedula = ?";
+    $sqlProfesor = "SELECT pr.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                          p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula, n.codigo as nacionalidad_codigo 
+                   FROM personas p 
+                   INNER JOIN profesores pr ON p.profesores_id = pr.profesor_id 
+                   LEFT JOIN nacionalidades n ON p.id_nacionalidades = n.id 
+                   WHERE p.cedula = ?";
     $queryProfesor = $pdo->prepare($sqlProfesor);
     $queryProfesor->execute([$cedula]);
     $profesor = $queryProfesor->fetch(PDO::FETCH_ASSOC);
 
     // 3. Buscar en REPRESENTANTES
-    $sqlRepresentante = "SELECT r.*, n.codigo as nacionalidad_codigo 
-                         FROM representantes r 
-                         INNER JOIN nacionalidades n ON r.id_nacionalidades = n.id 
-                         WHERE r.cedula = ?";
+    $sqlRepresentante = "SELECT r.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                                p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula, n.codigo as nacionalidad_codigo 
+                         FROM personas p 
+                         INNER JOIN representantes r ON p.representantes_id = r.id_representates 
+                         LEFT JOIN nacionalidades n ON p.id_nacionalidades = n.id 
+                         WHERE p.cedula = ?";
     $queryRepresentante = $pdo->prepare($sqlRepresentante);
     $queryRepresentante->execute([$cedula]);
     $representante = $queryRepresentante->fetch(PDO::FETCH_ASSOC);

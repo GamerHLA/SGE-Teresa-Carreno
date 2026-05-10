@@ -14,7 +14,7 @@ ob_clean();
 try {
     // Actualizar estados de directores vencidos globalmente
     $fechaActual = date('Y-m-d');
-    $sqlUpdateStatus = "UPDATE profesor SET es_director = 2 WHERE es_director = 1 AND director_fecha_fin IS NOT NULL AND director_fecha_fin < ?";
+    $sqlUpdateStatus = "UPDATE profesores SET es_director = 2 WHERE es_director = 1 AND director_fecha_fin IS NOT NULL AND director_fecha_fin < ?";
     $queryUpdate = $pdo->prepare($sqlUpdateStatus);
     $queryUpdate->execute([$fechaActual]);
 } catch (Exception $e) {
@@ -25,34 +25,31 @@ try {
     // Consulta SQL optimizada
     $sql = "SELECT 
                 pr.profesor_id,
-                pr.id_nacionalidades,
-                pr.cedula,
-                pr.sexo,
-                pr.nombre,
-                pr.apellido,
-                pr.id_estado,
-                pr.id_ciudad,
-                pr.id_municipio,
-                pr.id_parroquia,
-                pr.telefono,
-                pr.correo,
+                p.cedula,
+                p.nombres AS nombre,
+                p.apellidos AS apellido,
+                p.sexo,
+                p.id_estado,
+                p.id_ciudad,
+                p.id_municipio,
+                p.id_parroquia,
+                p.telefono,
+                p.correo_electronico AS correo,
                 pr.es_director,
-                pr.estatus,
+                pr.status AS estatus,
                 pr.director_fecha_inicio,
                 pr.director_fecha_fin,
                 e.estado as nombre_estado,
                 c.ciudad as nombre_ciudad,
                 m.municipio as nombre_municipio,
-                p.parroquia as nombre_parroquia
-            FROM profesor pr
-            LEFT JOIN estados e ON pr.id_estado = e.id_estado
-            LEFT JOIN ciudades c ON pr.id_ciudad = c.id_ciudad
-            LEFT JOIN municipios m ON pr.id_municipio = m.id_municipio
-            LEFT JOIN parroquias p ON pr.id_parroquia = p.id_parroquia
-            WHERE pr.estatus != 0";
-
-    $query = $pdo->prepare($sql);
-    $query->execute();
+                pa.parroquia as nombre_parroquia
+            FROM profesores pr
+            LEFT JOIN personas p ON p.profesores_id = pr.profesor_id
+            LEFT JOIN estados e ON p.id_estado = e.id_estado
+            LEFT JOIN ciudades c ON p.id_ciudad = c.id_ciudad
+            LEFT JOIN municipios m ON p.id_municipio = m.id_municipio
+            LEFT JOIN parroquias pa ON p.id_parroquia = pa.id_parroquia
+            WHERE pr.status != 0";
     $data = $query->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     file_put_contents('debug_profesores_error.txt', $e->getMessage());

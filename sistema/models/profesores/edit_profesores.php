@@ -12,9 +12,21 @@ $idProfesor = intval($_GET['id']);
 try {
     $sql = "SELECT 
                 pr.*,
+                p.cedula,
+                p.nombres AS nombre,
+                p.apellidos AS apellido,
+                p.telefono,
+                p.correo_electronico AS correo,
+                p.sexo,
+                p.id_nacionalidades,
+                p.id_estado,
+                p.id_ciudad,
+                p.id_municipio,
+                p.id_parroquia,
                 n.codigo as nacionalidad_codigo
-            FROM profesor pr
-            LEFT JOIN nacionalidades n ON pr.id_nacionalidades = n.id
+            FROM profesores pr
+            LEFT JOIN personas p ON p.profesores_id = pr.profesor_id
+            LEFT JOIN nacionalidades n ON p.id_nacionalidades = n.id
             WHERE pr.profesor_id = ?";
     
     $query = $pdo->prepare($sql);

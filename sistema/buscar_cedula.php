@@ -63,33 +63,47 @@ function buscarEnTodasLasTablas($pdo, $cedula)
 
     try {
         // Buscar en alumnos
-        $sql = "SELECT * FROM alumnos WHERE cedula = ? AND estatus = 1";
+        $sql = "SELECT a.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                       p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula 
+                FROM personas p 
+                INNER JOIN alumnos a ON p.alumnos_id = a.id_alumnos 
+                WHERE p.cedula = ? AND a.estatus = 1";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$cedula]);
         $resultados['alumnos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo "<div class='alert alert-secondary'>Alumnos encontrados: " . count($resultados['alumnos']) . "</div>";
 
         // Buscar en representantes
-        $sql = "SELECT * FROM representantes WHERE cedula = ? AND estatus = 1";
+        $sql = "SELECT r.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                       p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula 
+                FROM personas p 
+                INNER JOIN representantes r ON p.representantes_id = r.id_representates 
+                WHERE p.cedula = ? AND r.estatus = 1";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$cedula]);
         $resultados['representantes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo "<div class='alert alert-secondary'>Representantes encontrados: " . count($resultados['representantes']) . "</div>";
 
         // Buscar en profesores
-        $sql = "SELECT * FROM profesor WHERE cedula = ? AND estatus = 1";
+        $sql = "SELECT pr.*, p.nombres AS nombre, p.apellidos AS apellido, p.telefono, p.correo_electronico AS correo, 
+                       p.fecha_nacimiento AS fecha_nac, p.sexo, p.cedula 
+                FROM personas p 
+                INNER JOIN profesores pr ON p.profesores_id = pr.profesor_id 
+                WHERE p.cedula = ? AND pr.status = 1";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$cedula]);
         $resultados['profesores'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo "<div class='alert alert-secondary'>Profesores encontrados: " . count($resultados['profesores']) . "</div>";
 
-        // Buscar en usuarios (buscando por nombre que contenga la cédula)
-        $sql = "SELECT u.*, r.nombre_rol FROM usuarios u 
-                LEFT JOIN rol r ON u.rol = r.rol_id 
-                WHERE (u.nombre LIKE ? OR u.usuario LIKE ?) AND u.estatus = 1";
+        // Buscar en usuarios (buscando por nombre, apellido o usuario)
+        $sql = "SELECT u.*, r.nombre_rol, p.nombres AS nombre, p.apellidos AS apellido 
+                FROM usuarios u 
+                LEFT JOIN rol r ON u.id_rol = r.id 
+                LEFT JOIN personas p ON u.id_persona = p.id_persona 
+                WHERE (p.nombres ILIKE ? OR p.apellidos ILIKE ? OR u.usuario ILIKE ? OR p.cedula::text LIKE ?) AND u.estatus = 1";
         $stmt = $pdo->prepare($sql);
         $busqueda = "%$cedula%";
-        $stmt->execute([$busqueda, $busqueda]);
+        $stmt->execute([$busqueda, $busqueda, $busqueda, $busqueda]);
         $resultados['usuarios'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo "<div class='alert alert-secondary'>Usuarios encontrados: " . count($resultados['usuarios']) . "</div>";
     } catch (PDOException $e) {

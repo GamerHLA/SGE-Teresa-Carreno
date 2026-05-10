@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $queryObs->execute([$idProfesor, $observacionContent]);
 
             // Activar Profesor
-            $sql = "UPDATE profesor SET estatus = 1 WHERE profesor_id = ?";
+            $sql = "UPDATE profesores SET status = 1 WHERE profesor_id = ?";
             $query = $pdo->prepare($sql);
             $result = $query->execute([$idProfesor]);
 

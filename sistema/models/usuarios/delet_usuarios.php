@@ -10,13 +10,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $idUser = intval($_POST['idUser']); // Convertir a entero por seguridad
 
         // Verificar si el usuario es administrador
-        $sql_rol = "SELECT rol FROM usuarios WHERE user_id = ?";
+        $sql_rol = "SELECT id_rol FROM usuarios WHERE id_usuario = ?";
         $query_rol = $pdo->prepare($sql_rol);
         $query_rol->execute([$idUser]);
         $user_rol = $query_rol->fetchColumn();
 
         if ($user_rol == 1) { // 1 es el ID de Administrador
-            $sql_count = "SELECT COUNT(*) FROM usuarios WHERE rol = 1 AND estatus = 1";
+            $sql_count = "SELECT COUNT(*) FROM usuarios WHERE id_rol = 1 AND estatus = 1";
             $query_count = $pdo->prepare($sql_count);
             $query_count->execute();
             $admin_count = $query_count->fetchColumn();
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $sql = "UPDATE usuarios SET estatus = 2 WHERE user_id = ?";
+        $sql = "UPDATE usuarios SET estatus = 2 WHERE id_usuario = ?";
         $query = $pdo->prepare($sql);
         $result = $query->execute([$idUser]);
 

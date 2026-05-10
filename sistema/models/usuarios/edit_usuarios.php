@@ -3,7 +3,13 @@
 require_once '../../includes/config.php';
 
     $idUser = $_GET['id'];
-    $sql = "SELECT u.id_usuario as user_id, p.nombres as nombre, u.usuario, u.id_rol as rol, u.estatus 
+    $sql = "SELECT 
+                u.id_usuario as user_id, 
+                p.nombres as nombre, 
+                u.usuario, 
+                u.id_rol as rol, 
+                u.estatus, 
+                p.profesores_id as profesor_id 
             FROM usuarios as u 
             INNER JOIN personas as p ON u.id_persona = p.id_persona 
             WHERE u.id_usuario = ?";

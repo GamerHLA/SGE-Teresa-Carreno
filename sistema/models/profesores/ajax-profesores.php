@@ -17,9 +17,7 @@ if (!empty($_POST)) {
     // Actualizar estados de directores vencidos globalmente antes de procesar
     try {
         $fechaActual = date('Y-m-d');
-        $sqlUpdateStatus = "UPDATE profesor SET es_director = 2 WHERE es_director = 1 AND director_fecha_fin IS NOT NULL AND director_fecha_fin < ?";
-        $queryUpdate = $pdo->prepare($sqlUpdateStatus);
-        $queryUpdate->execute([$fechaActual]);
+            $sqlUpdateStatus = "UPDATE profesores SET es_director = 2 WHERE es_director = 1 AND director_fecha_fin IS NOT NULL AND director_fecha_fin < ?";
     } catch (Exception $e) {
         // Silently fail or log if needed, operation can continue
         error_log("Error actualizando estados de directores: " . $e->getMessage());
@@ -104,7 +102,9 @@ if (!empty($_POST)) {
 
     try {
         // Verificar si la cédula ya existe (excepto para el profesor actual)
-        $sql = "SELECT profesor_id FROM profesor WHERE cedula = ? AND profesor_id != ?";
+        $sql = "SELECT pr.profesor_id FROM profesores pr 
+                INNER JOIN personas p ON p.profesores_id = pr.profesor_id 
+                WHERE p.cedula = ? AND pr.profesor_id != ?";
         $query = $pdo->prepare($sql);
         $query->execute([$cedula, $idProfesor]);
 
@@ -118,7 +118,7 @@ if (!empty($_POST)) {
             // Obtener el estatus actual del profesor si es UPDATE
             $statusToUse = 1; // Por defecto para INSERT
             if ($idProfesor > 0) {
-                $sqlGetStatus = "SELECT estatus FROM profesor WHERE profesor_id = ?";
+                $sqlGetStatus = "SELECT status FROM profesores WHERE profesor_id = ?";
                 $queryGetStatus = $pdo->prepare($sqlGetStatus);
                 $queryGetStatus->execute([$idProfesor]);
                 $currentData = $queryGetStatus->fetch(PDO::FETCH_ASSOC);
@@ -157,8 +157,10 @@ if (!empty($_POST)) {
             }
 
             // Validar superposición de fechas con otros directores (Activos y Ex-Directores)
-            $sql_directores = "SELECT nombre, apellido, director_fecha_inicio, director_fecha_fin FROM profesor 
-                               WHERE es_director IN (1, 2) AND profesor_id != ?";
+            $sql_directores = "SELECT p.nombres AS nombre, p.apellidos AS apellido, pr.director_fecha_inicio, pr.director_fecha_fin 
+                               FROM profesores pr 
+                               INNER JOIN personas p ON p.profesores_id = pr.profesor_id 
+                               WHERE pr.es_director IN (1, 2) AND pr.profesor_id != ?";
             $query_directores = $pdo->prepare($sql_directores);
             $query_directores->execute(array($idProfesor));
             $otros_directores = $query_directores->fetchAll(PDO::FETCH_ASSOC);
@@ -182,14 +184,13 @@ if (!empty($_POST)) {
         }
         // Determinar si es inserción o actualización
         if ($idProfesor == 0) {
-            $sql = "INSERT INTO profesor (id_nacionalidades, nombre, apellido, sexo, id_estado, id_ciudad, id_municipio, id_parroquia, cedula, telefono, correo, estatus, es_director, director_fecha_inicio, director_fecha_fin) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)"; // Siempre estatus = 1 para nuevos
-            $params = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $cedula, $telefono, $email, $es_director, $director_fecha_inicio, $director_fecha_fin];
+            $sql = "INSERT INTO profesores (status, es_director, director_fecha_inicio, director_fecha_fin) 
+                    VALUES (?, ?, ?, ?)";
+            $params = [$estatus, $es_director, $director_fecha_inicio, $director_fecha_fin];
             $msg = 'Profesor creado correctamente';
         } else {
-            $sql = "UPDATE profesor SET id_nacionalidades = ?, nombre = ?, apellido = ?, sexo = ?, id_estado = ?, id_ciudad = ?, id_municipio = ?, id_parroquia = ?, cedula = ?, 
-                    telefono = ?, correo = ?, es_director = ?, director_fecha_inicio = ?, director_fecha_fin = ?, estatus = ? WHERE profesor_id = ?";
-            $params = [$idNacionalidad, $nombre, $apellido, $sexo, $idEstado, $idCiudad, $idMunicipio, $idParroquia, $cedula, $telefono, $email, $es_director, $director_fecha_inicio, $director_fecha_fin, $estatus, $idProfesor];
+            $sql = "UPDATE profesores SET status = ?, es_director = ?, director_fecha_inicio = ?, director_fecha_fin = ? WHERE profesor_id = ?";
+            $params = [$estatus, $es_director, $director_fecha_inicio, $director_fecha_fin, $idProfesor];
             $msg = 'Profesor actualizado correctamente';
         }
 
@@ -243,30 +244,13 @@ if (!empty($_POST)) {
                     error_log("Error sincronizando representante: " . $e->getMessage());
                 }
 
-                // Sincronización con Usuarios (por ID de Profesor)
-                // Buscar si este profesor tiene un usuario asociado
+                // No se realiza sincronización de usuario aquí porque el esquema actual de usuarios
+                // está basado en id_persona y requiere una refactorización más amplia del módulo.
+                // Este bloque se mantiene para evitar consultas inválidas sobre campos legacy.
                 try {
-                    $sqlUser = "SELECT user_id FROM usuarios WHERE profesor_id = ?";
-                    $queryUser = $pdo->prepare($sqlUser);
-                    $queryUser->execute([$idProfesor]);
-                    $usuario = $queryUser->fetch(PDO::FETCH_ASSOC);
-
-                    if ($usuario) {
-                        // Actualizar nombre del usuario
-                        $nombreCompleto = $nombre . ' ' . $apellido;
-                        $sqlUpdateUser = "UPDATE usuarios SET nombre = ? WHERE user_id = ?";
-                        $queryUpdateUser = $pdo->prepare($sqlUpdateUser);
-                        $queryUpdateUser->execute([$nombreCompleto, $usuario['user_id']]);
-
-                        // Actualizar variable de sesión si el usuario actualizado es el actual
-                        if (isset($_SESSION['idUser']) && $_SESSION['idUser'] == $usuario['user_id']) {
-                            $_SESSION['nombre'] = $nombreCompleto;
-                            // Add flag to response to update UI
-                            $new_user_name_for_ui = $nombreCompleto;
-                        }
-                    }
+                    error_log("Sincronización de usuario omitida: el vínculo actual es por id_persona.");
                 } catch (Exception $e) {
-                    error_log("Error sincronizando usuario: " . $e->getMessage());
+                    error_log("Error en lógica de sincronización de usuario: " . $e->getMessage());
                 }
             }
             $response = ['status' => true, 'msg' => $msg, 'profesor_id' => intval($idProfesor)];

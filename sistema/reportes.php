@@ -27,7 +27,7 @@ require_once 'includes/config.php'; // Configuración de base de datos
 // Verificar si existe un director activo (es_director = 1)
 // Nota: La lógica de actualización de estado (1->2) corre en table_profesores.php/ajax.
 // Aquí solo leemos el estado actual para validar si se pueden generar ciertos reportes
-$sqlDirector = "SELECT COUNT(*) as total FROM profesor WHERE es_director = 1";
+$sqlDirector = "SELECT COUNT(*) as total FROM profesores WHERE es_director = 1";
 $queryDirector = $pdo->prepare($sqlDirector);
 $queryDirector->execute();
 $hasDirector = $queryDirector->fetch(PDO::FETCH_ASSOC)['total'] > 0;

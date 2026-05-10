@@ -5,7 +5,7 @@ $exclude_id = isset($_GET['exclude_id']) ? intval($_GET['exclude_id']) : 0;
 
 // Verificar si existe un director ACTIVO (excluyendo el ID proporcionado)
 $fechaActual = date('Y-m-d');
-$sql = "SELECT profesor_id FROM profesor 
+$sql = "SELECT profesor_id FROM profesores 
         WHERE es_director = 1 
         AND profesor_id != ? 
         AND (director_fecha_fin IS NULL OR director_fecha_fin >= ?)";
